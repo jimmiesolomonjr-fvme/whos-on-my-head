@@ -1,0 +1,26 @@
+{
+  "people": [
+    { "file": "180702-lebron-james-lakers.webp", "name": "LeBron James", "cat": "Athletes" },
+    { "file": "DMX_PressPhotoIngrooves.jpg", "name": "DMX", "cat": "Rappers" },
+    { "file": "Damson-Idris-Has-The-Girls-In-Shambles-After-Switching-Up-His-Look-e1752115825393.webp", "name": "Damson Idris", "cat": "Actors" },
+    { "file": "KEKE PALMER 040325 GettyImages-2202990954.webp", "name": "Keke Palmer", "cat": "Actors" },
+    { "file": "Rick-ross-smoking.webp", "name": "Rick Ross", "cat": "Rappers" },
+{ "file": "Tupac-Shakur-1993.webp", "name": "Tupac Shakur", "cat": "Rappers" },
+    { "file": "angelreese.jpg", "name": "Angel Reese", "cat": "Athletes" },
+    { "file": "drake-2019-file.jpg", "name": "Drake", "cat": "Rappers" },
+    { "file": "floyd-mayweather.avif", "name": "Floyd Mayweather", "cat": "Athletes" },
+    { "file": "gettyimages-2244042935.jpg", "name": "Barack Obama", "cat": "Icons" },
+    { "file": "ice spice dark hair hero.webp", "name": "Ice Spice", "cat": "Rappers" },
+    { "file": "idris-elba.webp", "name": "Idris Elba", "cat": "Actors" },
+    { "file": "kanyewest.jpeg", "name": "Kanye West", "cat": "Rappers" },
+    { "file": "kevin-hart-file.jpg", "name": "Kevin Hart", "cat": "Comedians" },
+    { "file": "kim kardashian chignon.webp", "name": "Kim Kardashian", "cat": "Icons" },
+    { "file": "latto.webp", "name": "Latto", "cat": "Rappers" },
+    { "file": "lil-durk-interview.jpg", "name": "Lil Durk", "cat": "Rappers" },
+    { "file": "mike-tyson.avif", "name": "Mike Tyson", "cat": "Athletes" },
+    { "file": "mikeepps.jpg", "name": "Mike Epps", "cat": "Comedians" },
+    { "file": "northwest.avif", "name": "North West", "cat": "Icons" },
+    { "file": "suissa-kobe2.jpg", "name": "Kobe Bryant", "cat": "Athletes" },
+    { "file": "youngboy.webp", "name": "YoungBoy Never Broke Again", "cat": "Rappers" }
+  ]
+}

@@ -1,0 +1,521 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Who's On My Head</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;800&display=swap">
+<style>
+  /* Layout: one-screen phone app. Setup is a single scrolling column; play is a full-bleed photo with tap zones on both halves, timer pinned top, rule banner pinned bottom. */
+  :root {
+    --bg: #15101f;
+    --bg-2: #211a30;
+    --fg: #fbf6ee;
+    --muted: #a99fbd;
+    --line: #3a2f52;
+    --accent: #ffc83d;
+    --accent-ink: #1b1405;
+    --good: #35d38a;
+    --bad: #ff6b6b;
+    --display: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
+    --body: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #fbf6ee; --bg-2: #f0e8da; --fg: #1b1426; --muted: #5f5572; --line: #d9cfbf;
+      --accent: #ffb800; --accent-ink: #1b1405; --good: #15a35f; --bad: #d93f3f; color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #fbf6ee; --bg-2: #f0e8da; --fg: #1b1426; --muted: #5f5572; --line: #d9cfbf;
+    --accent: #ffb800; --accent-ink: #1b1405; --good: #15a35f; --bad: #d93f3f; color-scheme: light;
+  }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--body); margin: 0; overflow: hidden; }
+  * { box-sizing: border-box; }
+  button { font: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .screen { height: 100%; display: flex; flex-direction: column; padding-block: 20px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .scroll { overflow-y: auto; }
+  .wrap { width: 100%; max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+  .brand { font-family: var(--display); font-size: clamp(44px, 12vw, 72px); line-height: .92; text-transform: uppercase; letter-spacing: .01em; margin: 0; text-wrap: balance; }
+  .brand em { font-style: normal; color: var(--accent); }
+  .tag { color: var(--muted); margin: 8px 0 0; line-height: 1.4; max-width: 38ch; }
+
+  .label { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; line-height: 1.4; }
+
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mode { text-align: left; background: var(--bg-2); border: 2px solid var(--line); border-radius: 14px; padding: 14px; color: var(--fg); display: flex; flex-direction: column; gap: 6px; min-height: 112px; }
+  .mode strong { font-family: var(--display); font-size: 22px; letter-spacing: .02em; text-transform: uppercase; font-weight: 400; }
+  .mode span { font-size: 13px; color: var(--muted); line-height: 1.35; }
+  .mode[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--bg-2)); }
+  .mode[aria-pressed="true"] span { color: var(--fg); }
+
+  .stepper { display: flex; align-items: center; gap: 12px; background: var(--bg-2); border: 2px solid var(--line); border-radius: 14px; padding: 8px; }
+  .stepper button { width: 52px; height: 52px; border-radius: 10px; border: 0; background: var(--line); color: var(--fg); font-size: 26px; font-weight: 800; }
+  .stepper output { flex: 1; text-align: center; font-family: var(--display); font-size: 44px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border-radius: 999px; border: 2px solid var(--line); background: transparent; color: var(--muted); padding: 8px 14px; font-weight: 600; font-size: 14px; }
+  .chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .chip small { font-weight: 400; opacity: .7; margin-left: 4px; }
+
+  /* Library */
+  .lib { background: var(--bg-2); border: 2px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .lib-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .lib-head strong { font-size: 16px; }
+  .lib-head span { color: var(--muted); font-size: 13px; }
+  .uprow { display: flex; flex-direction: column; gap: 8px; }
+  .uprow select { padding: 12px; border-radius: 10px; border: 2px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; }
+  .uploader { position: relative; border: 2px dashed var(--line); border-radius: 12px; padding: 18px 14px; text-align: center; color: var(--muted); font-size: 14px; line-height: 1.4; }
+  .uploader strong { color: var(--fg); display: block; font-size: 15px; margin-bottom: 4px; }
+  .uploader input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .uploader.drag { border-color: var(--accent); color: var(--fg); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+  .tile { position: relative; aspect-ratio: 1; max-width: 100%; border-radius: 10px; overflow: hidden; background: var(--line); }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tile .nm { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 5px; font-size: 11px; font-weight: 700; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.8)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .x { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(0,0,0,.65); color: #fff; font-size: 14px; line-height: 1; padding: 0; }
+  .tile .ed { position: absolute; inset: 0; border: 0; background: transparent; padding: 0; }
+  .rename { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .rename input { flex: 1 1 140px; min-width: 0; padding: 10px; border-radius: 10px; border: 2px solid var(--accent); background: var(--bg); color: var(--fg); }
+  .rename button { border: 0; border-radius: 10px; padding: 10px 14px; background: var(--fg); color: var(--bg); font-weight: 800; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 8px 0; }
+
+  details.ideas { border: 2px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  details.ideas summary { cursor: pointer; font-weight: 800; }
+  .ideas-cat { margin-top: 12px; }
+  .ideas-cat h4 { margin: 0 0 4px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .ideas-cat p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg); }
+
+  .primary { width: 100%; border: 0; border-radius: 16px; background: var(--accent); color: var(--accent-ink); font-family: var(--display); font-size: 30px; letter-spacing: .04em; text-transform: uppercase; padding: 18px; }
+  .primary:disabled { opacity: .4; cursor: not-allowed; }
+  .ghost { width: 100%; border: 2px solid var(--line); border-radius: 16px; background: transparent; color: var(--fg); font-weight: 800; padding: 14px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .switch { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+  .switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+  /* Countdown */
+  .count { align-items: center; justify-content: center; text-align: center; gap: 12px; }
+  .count .big { font-family: var(--display); font-size: clamp(120px, 40vw, 220px); line-height: 1; color: var(--accent); }
+  .count p { color: var(--muted); font-size: 18px; margin: 0; max-width: 30ch; }
+
+  /* Play */
+  .play { padding: 0; position: relative; background: #000; }
+  .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .topbar { position: absolute; left: 0; right: 0; top: 0; padding-top: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; justify-content: space-between; align-items: center; z-index: 2; pointer-events: none; }
+  .timer { font-family: var(--display); font-size: 40px; letter-spacing: .05em; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.8); }
+  .timer.low { color: var(--bad); }
+  .score { font-weight: 800; font-size: 16px; background: rgba(0,0,0,.65); color: #fff; border-radius: 999px; padding: 6px 14px; }
+  .topbar .quit { pointer-events: auto; background: rgba(0,0,0,.65); border: 0; color: #fff; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
+  .zones { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; z-index: 1; }
+  .zone { border: 0; background: transparent; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 96px; font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #fff; opacity: .7; text-shadow: 0 1px 6px rgba(0,0,0,.9); }
+  .zone.pass { color: var(--bad); }
+  .zone.got { color: var(--good); }
+  .caption { position: absolute; left: 0; right: 0; bottom: 48px; padding-bottom: env(safe-area-inset-bottom, 0px); text-align: center; z-index: 1; pointer-events: none; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .caption .name { display: inline-block; font-family: var(--display); font-size: clamp(26px, 7vw, 48px); text-transform: uppercase; color: #fff; background: rgba(0,0,0,.6); padding: 4px 14px; border-radius: 10px; line-height: 1.1; max-width: 100%; }
+  .flash { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: clamp(60px, 18vw, 140px); text-transform: uppercase; color: var(--accent-ink); pointer-events: none; }
+  .flash.got { background: var(--good); }
+  .flash.pass { background: var(--bad); }
+  .rotate { position: absolute; inset: 0; z-index: 5; background: var(--bg); color: var(--fg); display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 24px; }
+  .rotate .icon { width: 64px; height: 110px; border: 4px solid var(--accent); border-radius: 12px; transform: rotate(-90deg); }
+  .rotate strong { font-family: var(--display); font-size: 36px; text-transform: uppercase; letter-spacing: .03em; }
+  .rotate p { margin: 0; color: var(--muted); max-width: 30ch; }
+  @media (orientation: portrait) { .play .rotate { display: flex; } }
+  @media (orientation: landscape) and (max-height: 500px) {
+    .topbar { padding-top: 8px; }
+    .timer { font-size: 32px; }
+    .zone { padding-bottom: 60px; font-size: 12px; }
+    .caption { bottom: 40px; }
+    .caption .name { font-size: clamp(22px, 5vh, 40px); }
+    .rule { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); font-size: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .rotate .icon { transform: none; } }
+  .rule { position: absolute; left: 0; right: 0; bottom: 0; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); padding-top: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); background: var(--accent); color: var(--accent-ink); text-align: center; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: 14px; z-index: 2; pointer-events: none; }
+
+  /* Results */
+  .result-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .bignum { font-family: var(--display); font-size: clamp(72px, 24vw, 140px); line-height: 1; color: var(--accent); }
+  .result-head p { margin: 0; color: var(--muted); font-size: 18px; }
+  .list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  .list li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--bg-2); font-weight: 600; }
+  .list img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex: none; }
+  .list .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .list .got .dot { background: var(--good); }
+  .list .pass .dot { background: var(--bad); }
+  .list .pass { color: var(--muted); }
+  .actions { display: flex; flex-direction: column; gap: 10px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .flash { animation: pop .45s ease-out forwards; }
+    @keyframes pop { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+  }
+</style>
+
+<!-- SETUP -->
+<section id="setup" class="screen scroll">
+  <div class="wrap">
+    <header>
+      <h1 class="brand">Who's on<br>my <em>head?</em></h1>
+      <p class="tag">Phone sideways on your forehead, photo facing the room. You ask the questions. The room only says <strong>yes</strong> or <strong>no</strong>.</p>
+    </header>
+
+    <div>
+      <p class="label">Mode</p>
+      <div class="modes" id="modes">
+        <button class="mode" data-mode="rapid" aria-pressed="true"><strong>Rapid Round</strong><span>Name as many faces as you can before time runs out.</span></button>
+        <button class="mode" data-mode="oneshot" aria-pressed="false"><strong>One Shot</strong><span>One face. One clock. Name them before it hits zero.</span></button>
+      </div>
+    </div>
+
+    <div>
+      <p class="label">Timer</p>
+      <div class="stepper">
+        <button id="tminus" aria-label="Less time">−</button>
+        <output id="tval">5:00</output>
+        <button id="tplus" aria-label="More time">+</button>
+      </div>
+      <p class="hint">30-second steps. Default is 5 minutes.</p>
+    </div>
+
+    <div class="lib">
+      <div class="lib-head"><strong>Photo library</strong><span id="libcount">No photos yet</span></div>
+      <div class="uprow">
+        <select id="upcat" aria-label="Category for uploaded photos">
+          <option value="Rappers">Rappers</option>
+          <option value="Singers">Singers</option>
+          <option value="Actors">Actors</option>
+          <option value="Athletes">Athletes</option>
+          <option value="Comedians">Comedians</option>
+          <option value="Icons">Icons</option>
+          <option value="Other">Other</option>
+        </select>
+        <label class="uploader" id="drop">
+          <strong>Add photos</strong>
+          Pick as many as you want. The file name becomes the name: <em>kendrick-lamar.jpg</em> shows as Kendrick Lamar. Tap a photo after to rename it.
+          <input type="file" id="files" accept="image/*" multiple>
+        </label>
+      </div>
+      <div class="rename" id="rename" hidden>
+        <input type="text" id="rnm" maxlength="40" aria-label="Name">
+        <button id="rsave">Save</button>
+        <button id="rcancel" class="ghost" style="width:auto;padding:8px 12px;border-width:2px">Cancel</button>
+      </div>
+      <div class="grid" id="grid"></div>
+      <p class="empty" id="empty">Load up some faces to start.</p>
+    </div>
+
+    <div id="catwrap" hidden>
+      <p class="label">Who's in the deck</p>
+      <div class="chips" id="chips"></div>
+      <p class="hint" id="deckcount"></p>
+    </div>
+
+    <div class="row">
+      <label class="switch"><input type="checkbox" id="showname" checked> Show the name under the photo</label>
+    </div>
+
+    <details class="ideas">
+      <summary>Need ideas? Names to go find photos of</summary>
+      <div id="ideas"></div>
+    </details>
+
+    <button class="primary" id="start" disabled>Start</button>
+  </div>
+</section>
+
+<!-- COUNTDOWN -->
+<section id="countdown" class="screen count" hidden>
+  <div class="big" id="cnum">3</div>
+  <p id="ctext"></p>
+</section>
+
+<!-- PLAY -->
+<section id="play" class="screen play" hidden>
+  <img class="photo" id="photo" alt="">
+  <div class="topbar">
+    <div class="timer" id="timer">5:00</div>
+    <div class="score" id="score">0</div>
+    <button class="quit" id="quit">End</button>
+  </div>
+  <div class="zones">
+    <button class="zone pass" id="zpass">Tap left: Pass</button>
+    <button class="zone got" id="zgot">Tap right: Got it</button>
+  </div>
+  <div class="caption" id="caption"><span class="name" id="name"></span></div>
+  <div class="rule">Audience: only answer yes or no</div>
+  <div class="flash" id="flash" hidden></div>
+  <div class="rotate"><div class="icon"></div><strong>Turn your phone sideways</strong><p>The game plays in landscape. The clock keeps running.</p></div>
+</section>
+
+<!-- RESULTS -->
+<section id="results" class="screen scroll" hidden>
+  <div class="wrap">
+    <div class="result-head">
+      <div class="bignum" id="rnum">0</div>
+      <p id="rtext"></p>
+    </div>
+    <ul class="list" id="rlist"></ul>
+    <div class="actions">
+      <button class="primary" id="again">Play again</button>
+      <button class="ghost" id="back">Change settings</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+
+  // ---- IndexedDB photo store (localStorage is too small for photos) ----
+  const DB = { name: 'wmh', store: 'people', db: null,
+    open() { return new Promise((res, rej) => { if (this.db) return res(this.db); const r = indexedDB.open(this.name, 1); r.onupgradeneeded = () => r.result.createObjectStore(this.store, { keyPath: 'id' }); r.onsuccess = () => { this.db = r.result; res(this.db); }; r.onerror = () => rej(r.error); }); },
+    tx(mode) { return this.db.transaction(this.store, mode).objectStore(this.store); },
+    all() { return new Promise((res, rej) => { const r = this.tx('readonly').getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+    put(p) { return new Promise((res, rej) => { const r = this.tx('readwrite').put(p); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); },
+    del(id) { return new Promise((res, rej) => { const r = this.tx('readwrite').delete(id); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
+  };
+
+  const IDEAS = {
+    Rappers: 'Jay-Z, Kendrick Lamar, Drake, Nicki Minaj, Cardi B, Lil Wayne, Snoop Dogg, Nas, Megan Thee Stallion, J. Cole, Future, Travis Scott, Missy Elliott, Lauryn Hill, LL Cool J, Ice Cube, Tupac, Biggie, Lil\' Kim, Doja Cat, GloRilla, Ludacris, T.I., André 3000, Busta Rhymes, Rick Ross, Young Thug, Ice Spice, Nipsey Hussle, DMX',
+    Singers: 'Beyoncé, Rihanna, Whitney Houston, Michael Jackson, Prince, Stevie Wonder, Aretha Franklin, Mariah Carey, Usher, Alicia Keys, SZA, The Weeknd, Mary J. Blige, Janet Jackson, Tina Turner, Diana Ross, Luther Vandross, Toni Braxton, Brandy, Ciara, Jennifer Hudson, John Legend, Frank Ocean, Summer Walker, Erykah Badu, Ne-Yo, Aaliyah, Marvin Gaye, James Brown, Nina Simone',
+    Actors: 'Denzel Washington, Will Smith, Viola Davis, Samuel L. Jackson, Morgan Freeman, Halle Berry, Eddie Murphy, Angela Bassett, Idris Elba, Regina King, Taraji P. Henson, Michael B. Jordan, Chadwick Boseman, Zendaya, Jamie Foxx, Octavia Spencer, Gabrielle Union, Kerry Washington, Issa Rae, Daniel Kaluuya, Keke Palmer, Whoopi Goldberg, Sidney Poitier, Tyler Perry, Martin Lawrence, Nia Long, Morris Chestnut, Wesley Snipes, Quinta Brunson, Colman Domingo',
+    Athletes: 'LeBron James, Michael Jordan, Serena Williams, Kobe Bryant, Shaquille O\'Neal, Muhammad Ali, Simone Biles, Tiger Woods, Usain Bolt, Magic Johnson, Stephen Curry, Kevin Durant, Patrick Mahomes, Lamar Jackson, Deion Sanders, Floyd Mayweather, Mike Tyson, Allen Iverson, Dwyane Wade, Charles Barkley, Jackie Robinson, A\'ja Wilson, Angel Reese, Sha\'Carri Richardson, Coco Gauff, Lewis Hamilton, Bo Jackson, Ja Morant, Anthony Edwards, Randy Moss',
+    Comedians: 'Dave Chappelle, Kevin Hart, Chris Rock, Bernie Mac, Richard Pryor, Wanda Sykes, Katt Williams, Cedric the Entertainer, Steve Harvey, Trevor Noah, Leslie Jones, Mike Epps, Tracy Morgan, Nick Cannon, Mo\'Nique, DC Young Fly, Druski, Wayne Brady, Sinbad, Chris Tucker, D.L. Hughley, Kountry Wayne, Kenan Thompson, Tiffany Haddish, Marlon Wayans',
+    Icons: 'Barack Obama, Michelle Obama, Martin Luther King Jr., Malcolm X, Rosa Parks, Harriet Tubman, Maya Angelou, Nelson Mandela, Kamala Harris, Oprah Winfrey, Spike Lee, Jordan Peele, Ava DuVernay, Ryan Coogler, Shonda Rhimes, Colin Kaepernick, Frederick Douglass, Thurgood Marshall, Tyra Banks, Naomi Campbell, Pharrell Williams, Quincy Jones, Madam C.J. Walker, Ruby Bridges, Ketanji Brown Jackson, John Lewis, Angela Davis, Toni Morrison, James Baldwin, Misty Copeland'
+  };
+  $('ideas').innerHTML = Object.entries(IDEAS).map(([k, v]) => `<div class="ideas-cat"><h4>${k}</h4><p>${v}</p></div>`).join('');
+
+  const state = { mode: 'rapid', seconds: 300, cats: {}, showName: true, people: [] };
+  const saved = ls.get('wmh_settings', null);
+  if (saved) { state.mode = saved.mode || 'rapid'; state.seconds = saved.seconds || 300; state.cats = saved.cats || {}; state.showName = saved.showName !== false; }
+  function persist() { ls.set('wmh_settings', { mode: state.mode, seconds: state.seconds, cats: state.cats, showName: state.showName }); }
+
+  const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+  // ---- Setup UI ----
+  function paintModes() { document.querySelectorAll('.mode').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === state.mode)); }
+  $('modes').addEventListener('click', e => { const b = e.target.closest('.mode'); if (!b) return; state.mode = b.dataset.mode; paintModes(); persist(); });
+  paintModes();
+
+  function paintTimer() { $('tval').textContent = fmt(state.seconds); }
+  $('tminus').addEventListener('click', () => { state.seconds = Math.max(30, state.seconds - 30); paintTimer(); persist(); });
+  $('tplus').addEventListener('click', () => { state.seconds = Math.min(900, state.seconds + 30); paintTimer(); persist(); });
+  paintTimer();
+
+  $('showname').checked = state.showName;
+  $('showname').addEventListener('change', e => { state.showName = e.target.checked; persist(); });
+
+  function categories() { const m = {}; for (const p of state.people) m[p.cat] = (m[p.cat] || 0) + 1; return m; }
+  function deckFor() { return state.people.filter(p => state.cats[p.cat] !== false); }
+  function paintChips() {
+    const cats = categories(); const box = $('chips'); box.innerHTML = '';
+    const keys = Object.keys(cats);
+    $('catwrap').hidden = keys.length < 2;
+    for (const k of keys) {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.setAttribute('aria-pressed', state.cats[k] !== false);
+      b.innerHTML = `${k}<small>${cats[k]}</small>`;
+      b.addEventListener('click', () => { state.cats[k] = state.cats[k] === false; b.setAttribute('aria-pressed', state.cats[k] !== false); persist(); paintCount(); });
+      box.appendChild(b);
+    }
+    paintCount();
+  }
+  function paintCount() {
+    const n = deckFor().length, total = state.people.length;
+    $('deckcount').textContent = n ? `${n} in the deck.` : 'Pick at least one group.';
+    $('libcount').textContent = total ? `${total} ${total === 1 ? 'face' : 'faces'} saved on this phone` : 'No photos yet';
+    $('empty').hidden = total > 0;
+    $('start').disabled = n === 0;
+  }
+
+  // ---- Library ----
+  let editing = null;
+  function paintGrid() {
+    const g = $('grid'); g.innerHTML = '';
+    for (const p of state.people) {
+      const t = document.createElement('div'); t.className = 'tile';
+      const img = document.createElement('img'); img.src = p.photo; img.alt = p.name; t.appendChild(img);
+      const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = p.name; t.appendChild(nm);
+      const ed = document.createElement('button'); ed.className = 'ed'; ed.setAttribute('aria-label', `Rename ${p.name}`);
+      ed.addEventListener('click', () => { editing = p; $('rnm').value = p.name; $('rename').hidden = false; $('rnm').focus(); });
+      t.appendChild(ed);
+      if (!p.builtin) {
+        const x = document.createElement('button'); x.className = 'x'; x.textContent = '×'; x.setAttribute('aria-label', `Remove ${p.name}`);
+        x.addEventListener('click', async e => { e.stopPropagation(); await DB.del(p.id); state.people = state.people.filter(q => q.id !== p.id); paintGrid(); paintChips(); });
+        t.appendChild(x);
+      }
+      g.appendChild(t);
+    }
+    paintChips();
+  }
+  $('rsave').addEventListener('click', async () => { if (!editing) return; const v = $('rnm').value.trim(); if (v) { editing.name = v; if (!editing.builtin) await DB.put(editing); } editing = null; $('rename').hidden = true; paintGrid(); });
+  $('rcancel').addEventListener('click', () => { editing = null; $('rename').hidden = true; });
+  $('rnm').addEventListener('keydown', e => { if (e.key === 'Enter') $('rsave').click(); });
+
+  function nameFromFile(f) {
+    let n = f.name.replace(/\.[^.]+$/, '').replace(/[-_.+]+/g, ' ').replace(/\s*\(\d+\)\s*$/, '').replace(/\s+/g, ' ').trim();
+    if (/^(img|image|photo|dsc|screenshot)/i.test(n) || /^\d+$/.test(n)) n = 'Unnamed';
+    return n.replace(/\b\w/g, c => c.toUpperCase());
+  }
+  function shrink(file) {
+    return new Promise(res => {
+      const img = new Image(); const url = URL.createObjectURL(file);
+      img.onload = () => { const max = 900; const s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', .82)); };
+      img.onerror = () => { URL.revokeObjectURL(url); res(null); };
+      img.src = url;
+    });
+  }
+  async function addFiles(files) {
+    const cat = $('upcat').value;
+    for (const f of files) {
+      if (!f.type.startsWith('image/')) continue;
+      const photo = await shrink(f); if (!photo) continue;
+      const p = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 8), name: nameFromFile(f), cat, photo };
+      try { await DB.put(p); state.people.push(p); } catch (e) { $('libcount').textContent = 'Could not save that photo. Storage may be full.'; break; }
+      paintGrid();
+    }
+  }
+  $('files').addEventListener('change', e => { addFiles([...e.target.files]); e.target.value = ''; });
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+  drop.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
+
+  (async () => {
+    let own = [];
+    try { await DB.open(); own = await DB.all(); } catch { $('libcount').textContent = 'Photo storage is unavailable in this browser.'; }
+    let builtin = [];
+    try { const r = await fetch('deck.json'); if (r.ok) { const d = await r.json(); builtin = (d.people || []).map(p => ({ id: 'b-' + p.file, name: p.name, cat: p.cat || 'Other', photo: p.file, builtin: true })); } } catch {}
+    state.people = builtin.concat(own);
+    paintGrid();
+  })();
+
+  // ---- Screens ----
+  const screens = ['setup', 'countdown', 'play', 'results'];
+  function show(id) { screens.forEach(s => $(s).hidden = s !== id); }
+
+  // ---- Audio / haptics ----
+  let ctx;
+  function beep(freq, dur, type) {
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || 'square'; o.frequency.value = freq; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(.12, ctx.currentTime); g.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + dur);
+      o.start(); o.stop(ctx.currentTime + dur);
+    } catch {}
+  }
+  function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch {} }
+
+  // ---- Game ----
+  let game = null, tick = null, wake = null;
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  $('start').addEventListener('click', async () => {
+    beep(440, .05);
+    try { await document.documentElement.requestFullscreen?.(); } catch {}
+    try { await screen.orientation?.lock?.('landscape'); } catch {}
+    const deck = shuffle(deckFor().slice());
+    game = { mode: state.mode, total: state.seconds, left: state.seconds, deck, idx: 0, log: [], passed: [] };
+    runCountdown();
+  });
+
+  function runCountdown() {
+    show('countdown');
+    let n = 3; $('cnum').textContent = n;
+    $('ctext').textContent = game.mode === 'oneshot' ? 'Phone on your forehead, photo facing the room. One face. One clock.' : 'Phone on your forehead, photo facing the room. Tap right for Got it, left for Pass.';
+    const iv = setInterval(() => { n--; if (n > 0) { $('cnum').textContent = n; beep(520, .08); } else { clearInterval(iv); beep(880, .25); startPlay(); } }, 900);
+  }
+
+  function current() { return game.deck[game.idx]; }
+  function paintCard() {
+    const p = current();
+    if (!p) { endGame(); return; }
+    $('photo').src = p.photo; $('name').textContent = p.name; $('caption').hidden = !state.showName;
+  }
+  function paintHud() {
+    $('timer').textContent = fmt(game.left); $('timer').classList.toggle('low', game.left <= 10);
+    $('score').textContent = game.mode === 'oneshot' ? 'One Shot' : `${game.log.filter(x => x.got).length} got`;
+  }
+
+  async function startPlay() {
+    show('play');
+    try { wake = await navigator.wakeLock?.request('screen'); } catch { wake = null; }
+    $('zpass').textContent = game.mode === 'oneshot' ? 'Tap left: Give up' : 'Tap left: Pass';
+    $('zgot').textContent = 'Tap right: Got it';
+    paintCard(); paintHud();
+    const t0 = Date.now();
+    tick = setInterval(() => {
+      const left = game.total - Math.floor((Date.now() - t0) / 1000);
+      if (left !== game.left) { game.left = Math.max(0, left); paintHud(); if (game.left <= 5 && game.left > 0) beep(600, .06); }
+      if (game.left <= 0) endGame(true);
+    }, 200);
+  }
+
+  function flash(kind, text) {
+    const f = $('flash'); f.className = 'flash ' + kind; f.textContent = text; f.hidden = false;
+    clearTimeout(f._t); f._t = setTimeout(() => { f.hidden = true; }, 450);
+  }
+
+  function next() {
+    game.idx++;
+    if (game.idx >= game.deck.length) {
+      if (game.passed.length) { game.deck = game.deck.concat(shuffle(game.passed)); game.passed = []; }
+      else { endGame(); return; }
+    }
+    paintCard();
+  }
+
+  $('zgot').addEventListener('click', () => {
+    if (!game || game.ended) return; const p = current(); if (!p) return;
+    beep(880, .12, 'triangle'); buzz(30);
+    if (game.mode === 'oneshot') { game.log.push({ p, got: true, left: game.left }); flash('got', 'Got it'); setTimeout(() => endGame(), 350); return; }
+    game.log.push({ p, got: true }); flash('got', 'Got it'); paintHud(); next();
+  });
+  $('zpass').addEventListener('click', () => {
+    if (!game || game.ended) return; const p = current(); if (!p) return;
+    beep(220, .15, 'sawtooth'); buzz([20, 40, 20]);
+    if (game.mode === 'oneshot') { game.log.push({ p, got: false, left: game.left }); flash('pass', 'Gave up'); setTimeout(() => endGame(), 350); return; }
+    game.log.push({ p, got: false }); game.passed.push(p); flash('pass', 'Pass'); next();
+  });
+  $('quit').addEventListener('click', () => endGame());
+
+  function endGame(timeUp) {
+    if (!game || game.ended) return; game.ended = true;
+    clearInterval(tick); try { wake && wake.release(); } catch {} wake = null;
+    try { screen.orientation?.unlock?.(); } catch {}
+    try { document.fullscreenElement && document.exitFullscreen?.(); } catch {}
+    if (timeUp) { beep(330, .4, 'square'); buzz([80, 60, 80, 60, 200]); const p = current(); if (p && game.mode === 'oneshot' && !game.log.length) game.log.push({ p, got: false, left: 0 }); }
+    show('results');
+    const got = game.log.filter(x => x.got);
+    if (game.mode === 'oneshot') {
+      const r = game.log[0];
+      if (r && r.got) { $('rnum').textContent = fmt(r.left); $('rtext').textContent = `left on the clock. It was ${r.p.name}.`; }
+      else { $('rnum').textContent = '0'; $('rtext').textContent = r ? `Time's up. It was ${r.p.name}.` : 'No one was named.'; }
+    } else {
+      $('rnum').textContent = got.length;
+      const passed = new Set(game.log.filter(x => !x.got).map(x => x.p.id)).size;
+      $('rtext').textContent = `${got.length === 1 ? 'face' : 'faces'} in ${fmt(game.total)}${passed ? `, ${passed} passed` : ''}.`;
+      if (!timeUp && game.idx >= game.deck.length && !game.passed.length) $('rtext').textContent += ' You cleared the whole deck.';
+    }
+    const ul = $('rlist'); ul.innerHTML = '';
+    const seen = new Set();
+    for (const x of game.log) {
+      if (seen.has(x.p.id)) continue; seen.add(x.p.id);
+      const gotIt = game.log.some(y => y.p.id === x.p.id && y.got);
+      const li = document.createElement('li'); li.className = gotIt ? 'got' : 'pass';
+      const img = document.createElement('img'); img.src = x.p.photo; img.alt = '';
+      const dot = document.createElement('span'); dot.className = 'dot';
+      li.append(dot, img, document.createTextNode(x.p.name)); ul.appendChild(li);
+    }
+  }
+
+  $('again').addEventListener('click', () => { $('start').click(); });
+  $('back').addEventListener('click', () => { game = null; show('setup'); });
+})();
+</script>
+
+</body></html>
