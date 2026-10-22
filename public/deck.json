@@ -21,6 +21,16 @@
     { "file": "mikeepps.jpg", "name": "Mike Epps", "cat": "Comedians" },
     { "file": "northwest.avif", "name": "North West", "cat": "Icons" },
     { "file": "suissa-kobe2.jpg", "name": "Kobe Bryant", "cat": "Athletes" },
-    { "file": "youngboy.webp", "name": "YoungBoy Never Broke Again", "cat": "Rappers" }
+    { "file": "youngboy.webp", "name": "YoungBoy Never Broke Again", "cat": "Rappers" },
+    { "file": "Chrisean-Rock-Shares-Message-About-Embracing-A-New-Life-While-Posting-Recent-Photos-Videos-scaled.webp", "name": "Chrisean Rock", "cat": "Rappers" },
+    { "file": "Glorilla red waves .webp", "name": "GloRilla", "cat": "Rappers" },
+    { "file": "Gold-medalist-Simone-Biles-celebrates-medal-at-2016-Olympic-Games.webp", "name": "Simone Biles", "cat": "Athletes" },
+    { "file": "Kai-Cenat.png", "name": "Kai Cenat", "cat": "Icons" },
+    { "file": "King-Von.webp", "name": "King Von", "cat": "Rappers" },
+    { "file": "chrisbrown.webp", "name": "Chris Brown", "cat": "Singers" },
+    { "file": "future.webp", "name": "Future", "cat": "Rappers" },
+    { "file": "jalen-hurts-1-102026-577f6cedc130413ea471707dfdc92c39.jpg", "name": "Jalen Hurts", "cat": "Athletes" },
+    { "file": "natalie-nunn.jpg", "name": "Natalie Nunn", "cat": "Icons" },
+    { "file": "sza.webp", "name": "SZA", "cat": "Singers" }
   ]
 }
