@@ -31,6 +31,13 @@
     { "file": "future.webp", "name": "Future", "cat": "Rappers" },
     { "file": "jalen-hurts-1-102026-577f6cedc130413ea471707dfdc92c39.jpg", "name": "Jalen Hurts", "cat": "Athletes" },
     { "file": "natalie-nunn.jpg", "name": "Natalie Nunn", "cat": "Icons" },
-    { "file": "sza.webp", "name": "SZA", "cat": "Singers" }
+    { "file": "sza.webp", "name": "SZA", "cat": "Singers" },
+    { "file": "50cent.webp", "name": "50 Cent", "cat": "Rappers" },
+    { "file": "Beyonce-Metlife-Renaissance3-Publicity-H-2023.webp", "name": "Beyonce", "cat": "Singers" },
+    { "file": "JT.webp", "name": "JT", "cat": "Rappers" },
+    { "file": "lil-uzi-vert-pronouns.jpg", "name": "Lil Uzi Vert", "cat": "Rappers" },
+    { "file": "popsmoke.jpg", "name": "Pop Smoke", "cat": "Rappers" },
+    { "file": "rihanna.jpg", "name": "Rihanna", "cat": "Singers" },
+    { "file": "willsmith.jpeg", "name": "Will Smith", "cat": "Actors" }
   ]
 }
