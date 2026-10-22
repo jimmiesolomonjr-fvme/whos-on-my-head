@@ -427,7 +427,7 @@
   $('start').addEventListener('click', async () => {
     beep(440, .05);
     try { await document.documentElement.requestFullscreen?.(); } catch {}
-    try { await screen.orientation?.lock?.('portrait'); } catch {}
+    try { await screen.orientation?.lock?.('landscape'); } catch {}
     const deck = shuffle(deckFor().slice());
     game = { mode: state.mode, total: state.seconds, left: state.seconds, deck, idx: 0, log: [], passed: [] };
     runCountdown();
@@ -527,56 +527,106 @@
   $('back').addEventListener('click', () => { game = null; show('setup'); });
 
   // ---- Tilt controls via DeviceOrientation ----
-  // Phone is on forehead in portrait. beta = forward/back tilt.
-  // Neutral (on forehead, upright) ~ beta 90.
-  // Tilt down (bow head / tilt phone toward ground) => beta increases toward 180 => GOT IT
-  // Tilt up (tilt phone toward ceiling) => beta decreases toward 0 => SKIP/PASS
-  const TILT_THRESHOLD = 40; // degrees from neutral (90) to trigger
-  const TILT_RESET = 20;     // must return within this range of neutral to re-arm
+  // Auto-calibrates: captures baseline orientation when play starts,
+  // then detects tilt relative to that baseline on whichever axis moves most.
+  // Works in portrait OR landscape, any rotation.
+  const TILT_TRIGGER = 25;  // degrees from baseline to fire
+  const TILT_HINT = 10;     // degrees to start showing hint
+  const TILT_RESET = 12;    // must return within this of baseline to re-arm
+  const TILT_COOLDOWN = 600; // ms after firing before re-arm
   let tiltArmed = true;
   let tiltActive = false;
+  let tiltBaseline = null;   // { beta, gamma }
+  let tiltCoolUntil = 0;
+  let tiltSamples = [];      // collect samples during countdown to average baseline
+
+  function tiltDelta(e) {
+    if (!tiltBaseline) return { down: 0, up: 0 };
+    // Compute delta on both axes from baseline
+    let db = e.beta - tiltBaseline.beta;
+    let dg = e.gamma - tiltBaseline.gamma;
+    // Use whichever axis has the larger absolute deviation
+    // In portrait: beta moves most on bow/lookup. In landscape: gamma moves most.
+    if (Math.abs(db) >= Math.abs(dg)) {
+      // beta-dominant: positive = tilted forward (bow) = GOT IT, negative = back = SKIP
+      return { down: db, up: -db, raw: db };
+    } else {
+      // gamma-dominant: need to figure out sign.
+      // In left-landscape (CCW), bowing decreases gamma. In right-landscape, bowing increases.
+      // Use the sign of baseline gamma to determine direction:
+      // If baseline gamma > 45 (right-landscape-ish), positive dg = bow = GOT IT
+      // If baseline gamma < -45 (left-landscape-ish), negative dg = bow = GOT IT
+      // Otherwise, just use positive = down
+      let sign = 1;
+      if (tiltBaseline.gamma < -45) sign = -1;
+      return { down: dg * sign, up: -dg * sign, raw: dg };
+    }
+  }
 
   function handleTilt(e) {
-    if (!game || game.ended || !tiltActive) return;
-    const beta = e.beta; // -180 to 180
-    if (beta === null) return;
+    if (!tiltActive) return;
+    const beta = e.beta, gamma = e.gamma;
+    if (beta === null || gamma === null) return;
 
+    // Collect calibration samples during countdown
+    if (!tiltBaseline) {
+      tiltSamples.push({ beta, gamma });
+      if (tiltSamples.length >= 10) {
+        // Average the samples for a stable baseline
+        const avg = tiltSamples.reduce((a, s) => ({ beta: a.beta + s.beta, gamma: a.gamma + s.gamma }), { beta: 0, gamma: 0 });
+        tiltBaseline = { beta: avg.beta / tiltSamples.length, gamma: avg.gamma / tiltSamples.length };
+        tiltSamples = [];
+      }
+      return;
+    }
+
+    if (!game || game.ended) return;
+
+    const d = tiltDelta(e);
+    const now = Date.now();
     const hint = $('tilthint');
     const arrow = $('tiltarrow');
     const lbl = $('tiltlbl');
 
-    // Tilt down: beta > 90 + threshold (phone tilting face-down)
-    if (tiltArmed && beta > 90 + TILT_THRESHOLD) {
+    // Cooldown check
+    if (now < tiltCoolUntil) {
+      hint.classList.remove('show');
+      return;
+    }
+
+    // Trigger: tilt down past threshold = GOT IT
+    if (tiltArmed && d.down > TILT_TRIGGER) {
       tiltArmed = false;
+      tiltCoolUntil = now + TILT_COOLDOWN;
       hint.classList.remove('show');
       $('zgot').click();
       return;
     }
-    // Tilt up: beta < 90 - threshold (phone tilting face-up)
-    if (tiltArmed && beta < 90 - TILT_THRESHOLD) {
+    // Trigger: tilt up past threshold = SKIP
+    if (tiltArmed && d.up > TILT_TRIGGER) {
       tiltArmed = false;
+      tiltCoolUntil = now + TILT_COOLDOWN;
       hint.classList.remove('show');
       $('zpass').click();
       return;
     }
 
-    // Re-arm when back near neutral
-    if (!tiltArmed && beta > 90 - TILT_RESET && beta < 90 + TILT_RESET) {
+    // Re-arm when back near baseline
+    if (!tiltArmed && Math.abs(d.down) < TILT_RESET && now >= tiltCoolUntil) {
       tiltArmed = true;
     }
 
     // Show live tilt hints
     if (tiltArmed) {
-      const offset = beta - 90;
-      if (offset > 15) {
+      if (d.down > TILT_HINT) {
         hint.classList.add('show');
-        arrow.textContent = '\u2B07'; // down arrow
+        arrow.textContent = '\u2B07';
         arrow.style.color = 'var(--good)';
         lbl.textContent = 'Got it!';
         lbl.style.color = 'var(--good)';
-      } else if (offset < -15) {
+      } else if (d.up > TILT_HINT) {
         hint.classList.add('show');
-        arrow.textContent = '\u2B06'; // up arrow
+        arrow.textContent = '\u2B06';
         arrow.style.color = 'var(--bad)';
         lbl.textContent = 'Skip';
         lbl.style.color = 'var(--bad)';
@@ -597,25 +647,24 @@
     return true;
   }
 
-  // Hook into game start
-  const origStart = $('start').onclick;
+  // Hook into game start — request permission + start listening during countdown
   $('start').addEventListener('click', async () => {
-    await requestMotion();
-    window.addEventListener('deviceorientation', handleTilt);
-    tiltActive = true;
-    tiltArmed = true;
+    const granted = await requestMotion();
+    if (granted) {
+      tiltBaseline = null;
+      tiltSamples = [];
+      tiltActive = true;
+      tiltArmed = true;
+      tiltCoolUntil = 0;
+      window.addEventListener('deviceorientation', handleTilt);
+    }
   }, { capture: true });
 
-  // Stop tilt on game end
-  const origEndGame = endGame;
-  const _origShow = show;
-  // Patch show to detect when leaving play screen
-  const origShowFn = show;
-
-  // Clean up tilt when results shown
+  // Clean up tilt when leaving play screen
   const mo = new MutationObserver(() => {
     if (!$('play').hidden) return;
     tiltActive = false;
+    tiltBaseline = null;
     $('tilthint').classList.remove('show');
   });
   mo.observe($('play'), { attributes: true, attributeFilter: ['hidden'] });
