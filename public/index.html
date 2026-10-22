@@ -1,6 +1,11 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Who's On My Head</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#15101f">
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;800&display=swap">
 <style>
   /* Layout: one-screen phone app. Setup is a single scrolling column; play is a full-bleed photo with tap zones on both halves, timer pinned top, rule banner pinned bottom. */
@@ -113,6 +118,10 @@
   .zone { border: 0; background: transparent; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 96px; font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #fff; opacity: .7; text-shadow: 0 1px 6px rgba(0,0,0,.9); }
   .zone.pass { color: var(--bad); }
   .zone.got { color: var(--good); }
+  .tilt-hint { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); z-index: 2; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; transition: opacity .2s; }
+  .tilt-hint.show { opacity: 1; }
+  .tilt-hint .arrow { font-size: 48px; line-height: 1; }
+  .tilt-hint .lbl { font-family: var(--display); font-size: 28px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,.9); }
   .caption { position: absolute; left: 0; right: 0; bottom: 48px; padding-bottom: env(safe-area-inset-bottom, 0px); text-align: center; z-index: 1; pointer-events: none; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   .caption .name { display: inline-block; font-family: var(--display); font-size: clamp(26px, 7vw, 48px); text-transform: uppercase; color: #fff; background: rgba(0,0,0,.6); padding: 4px 14px; border-radius: 10px; line-height: 1.1; max-width: 100%; }
   .flash { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: clamp(60px, 18vw, 140px); text-transform: uppercase; color: var(--accent-ink); pointer-events: none; }
@@ -122,7 +131,7 @@
   .rotate .icon { width: 64px; height: 110px; border: 4px solid var(--accent); border-radius: 12px; transform: rotate(-90deg); }
   .rotate strong { font-family: var(--display); font-size: 36px; text-transform: uppercase; letter-spacing: .03em; }
   .rotate p { margin: 0; color: var(--muted); max-width: 30ch; }
-  @media (orientation: portrait) { .play .rotate { display: flex; } }
+  /* rotate hint removed — tilt controls work in portrait */
   @media (orientation: landscape) and (max-height: 500px) {
     .topbar { padding-top: 8px; }
     .timer { font-size: 32px; }
@@ -158,7 +167,7 @@
   <div class="wrap">
     <header>
       <h1 class="brand">Who's on<br>my <em>head?</em></h1>
-      <p class="tag">Phone sideways on your forehead, photo facing the room. You ask the questions. The room only says <strong>yes</strong> or <strong>no</strong>.</p>
+      <p class="tag">Phone on your forehead, photo facing the room. Tilt <strong>down</strong> = got it. Tilt <strong>up</strong> = skip. The room only says <strong>yes</strong> or <strong>no</strong>.</p>
     </header>
 
     <div>
@@ -240,13 +249,14 @@
     <button class="quit" id="quit">End</button>
   </div>
   <div class="zones">
-    <button class="zone pass" id="zpass">Tap left: Pass</button>
-    <button class="zone got" id="zgot">Tap right: Got it</button>
+    <button class="zone pass" id="zpass" style="display:none">Pass</button>
+    <button class="zone got" id="zgot" style="display:none">Got it</button>
   </div>
+  <div class="tilt-hint" id="tilthint"><span class="arrow" id="tiltarrow"></span><span class="lbl" id="tiltlbl"></span></div>
   <div class="caption" id="caption"><span class="name" id="name"></span></div>
-  <div class="rule">Audience: only answer yes or no</div>
+  <div class="rule">Tilt down = got it &middot; Tilt up = skip</div>
   <div class="flash" id="flash" hidden></div>
-  <div class="rotate"><div class="icon"></div><strong>Turn your phone sideways</strong><p>The game plays in landscape. The clock keeps running.</p></div>
+  <div class="rotate"><div class="icon"></div><strong>Hold phone on forehead</strong><p>Tilt down = got it. Tilt up = skip.</p></div>
 </section>
 
 <!-- RESULTS -->
@@ -417,7 +427,7 @@
   $('start').addEventListener('click', async () => {
     beep(440, .05);
     try { await document.documentElement.requestFullscreen?.(); } catch {}
-    try { await screen.orientation?.lock?.('landscape'); } catch {}
+    try { await screen.orientation?.lock?.('portrait'); } catch {}
     const deck = shuffle(deckFor().slice());
     game = { mode: state.mode, total: state.seconds, left: state.seconds, deck, idx: 0, log: [], passed: [] };
     runCountdown();
@@ -426,7 +436,7 @@
   function runCountdown() {
     show('countdown');
     let n = 3; $('cnum').textContent = n;
-    $('ctext').textContent = game.mode === 'oneshot' ? 'Phone on your forehead, photo facing the room. One face. One clock.' : 'Phone on your forehead, photo facing the room. Tap right for Got it, left for Pass.';
+    $('ctext').textContent = game.mode === 'oneshot' ? 'Phone on your forehead, photo facing the room. Tilt down = got it.' : 'Phone on your forehead, photo facing the room. Tilt down = got it, tilt up = skip.';
     const iv = setInterval(() => { n--; if (n > 0) { $('cnum').textContent = n; beep(520, .08); } else { clearInterval(iv); beep(880, .25); startPlay(); } }, 900);
   }
 
@@ -515,6 +525,100 @@
 
   $('again').addEventListener('click', () => { $('start').click(); });
   $('back').addEventListener('click', () => { game = null; show('setup'); });
+
+  // ---- Tilt controls via DeviceOrientation ----
+  // Phone is on forehead in portrait. beta = forward/back tilt.
+  // Neutral (on forehead, upright) ~ beta 90.
+  // Tilt down (bow head / tilt phone toward ground) => beta increases toward 180 => GOT IT
+  // Tilt up (tilt phone toward ceiling) => beta decreases toward 0 => SKIP/PASS
+  const TILT_THRESHOLD = 40; // degrees from neutral (90) to trigger
+  const TILT_RESET = 20;     // must return within this range of neutral to re-arm
+  let tiltArmed = true;
+  let tiltActive = false;
+
+  function handleTilt(e) {
+    if (!game || game.ended || !tiltActive) return;
+    const beta = e.beta; // -180 to 180
+    if (beta === null) return;
+
+    const hint = $('tilthint');
+    const arrow = $('tiltarrow');
+    const lbl = $('tiltlbl');
+
+    // Tilt down: beta > 90 + threshold (phone tilting face-down)
+    if (tiltArmed && beta > 90 + TILT_THRESHOLD) {
+      tiltArmed = false;
+      hint.classList.remove('show');
+      $('zgot').click();
+      return;
+    }
+    // Tilt up: beta < 90 - threshold (phone tilting face-up)
+    if (tiltArmed && beta < 90 - TILT_THRESHOLD) {
+      tiltArmed = false;
+      hint.classList.remove('show');
+      $('zpass').click();
+      return;
+    }
+
+    // Re-arm when back near neutral
+    if (!tiltArmed && beta > 90 - TILT_RESET && beta < 90 + TILT_RESET) {
+      tiltArmed = true;
+    }
+
+    // Show live tilt hints
+    if (tiltArmed) {
+      const offset = beta - 90;
+      if (offset > 15) {
+        hint.classList.add('show');
+        arrow.textContent = '\u2B07'; // down arrow
+        arrow.style.color = 'var(--good)';
+        lbl.textContent = 'Got it!';
+        lbl.style.color = 'var(--good)';
+      } else if (offset < -15) {
+        hint.classList.add('show');
+        arrow.textContent = '\u2B06'; // up arrow
+        arrow.style.color = 'var(--bad)';
+        lbl.textContent = 'Skip';
+        lbl.style.color = 'var(--bad)';
+      } else {
+        hint.classList.remove('show');
+      }
+    }
+  }
+
+  // Request permission on iOS 13+
+  async function requestMotion() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const perm = await DeviceOrientationEvent.requestPermission();
+        if (perm !== 'granted') return false;
+      } catch { return false; }
+    }
+    return true;
+  }
+
+  // Hook into game start
+  const origStart = $('start').onclick;
+  $('start').addEventListener('click', async () => {
+    await requestMotion();
+    window.addEventListener('deviceorientation', handleTilt);
+    tiltActive = true;
+    tiltArmed = true;
+  }, { capture: true });
+
+  // Stop tilt on game end
+  const origEndGame = endGame;
+  const _origShow = show;
+  // Patch show to detect when leaving play screen
+  const origShowFn = show;
+
+  // Clean up tilt when results shown
+  const mo = new MutationObserver(() => {
+    if (!$('play').hidden) return;
+    tiltActive = false;
+    $('tilthint').classList.remove('show');
+  });
+  mo.observe($('play'), { attributes: true, attributeFilter: ['hidden'] });
 })();
 </script>
 

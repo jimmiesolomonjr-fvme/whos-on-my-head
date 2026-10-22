@@ -1,0 +1,10 @@
+{
+  "name": "Who's On My Head?",
+  "short_name": "Who's On My Head",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#15101f",
+  "theme_color": "#15101f",
+  "icons": []
+}
