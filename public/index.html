@@ -115,13 +115,9 @@
   .score { font-weight: 800; font-size: 16px; background: rgba(0,0,0,.65); color: #fff; border-radius: 999px; padding: 6px 14px; }
   .topbar .quit { pointer-events: auto; background: rgba(0,0,0,.65); border: 0; color: #fff; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
   .zones { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; z-index: 1; }
-  .zone { border: 0; background: transparent; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 96px; font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #fff; opacity: .7; text-shadow: 0 1px 6px rgba(0,0,0,.9); }
+  .zone { border: 0; background: transparent; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 96px; font-size: 0; color: transparent; }
   .zone.pass { color: var(--bad); }
   .zone.got { color: var(--good); }
-  .tilt-hint { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); z-index: 2; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; transition: opacity .2s; }
-  .tilt-hint.show { opacity: 1; }
-  .tilt-hint .arrow { font-size: 48px; line-height: 1; }
-  .tilt-hint .lbl { font-family: var(--display); font-size: 28px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,.9); }
   .caption { position: absolute; left: 0; right: 0; bottom: 48px; padding-bottom: env(safe-area-inset-bottom, 0px); text-align: center; z-index: 1; pointer-events: none; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   .caption .name { display: inline-block; font-family: var(--display); font-size: clamp(26px, 7vw, 48px); text-transform: uppercase; color: #fff; background: rgba(0,0,0,.6); padding: 4px 14px; border-radius: 10px; line-height: 1.1; max-width: 100%; }
   .flash { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: clamp(60px, 18vw, 140px); text-transform: uppercase; color: var(--accent-ink); pointer-events: none; }
@@ -131,7 +127,7 @@
   .rotate .icon { width: 64px; height: 110px; border: 4px solid var(--accent); border-radius: 12px; transform: rotate(-90deg); }
   .rotate strong { font-family: var(--display); font-size: 36px; text-transform: uppercase; letter-spacing: .03em; }
   .rotate p { margin: 0; color: var(--muted); max-width: 30ch; }
-  /* rotate hint removed — tilt controls work in portrait */
+  @media (orientation: portrait) { .play .rotate { display: flex; } }
   @media (orientation: landscape) and (max-height: 500px) {
     .topbar { padding-top: 8px; }
     .timer { font-size: 32px; }
@@ -167,7 +163,7 @@
   <div class="wrap">
     <header>
       <h1 class="brand">Who's on<br>my <em>head?</em></h1>
-      <p class="tag">Phone on your forehead, photo facing the room. Tilt <strong>down</strong> = got it. Tilt <strong>up</strong> = skip. The room only says <strong>yes</strong> or <strong>no</strong>.</p>
+      <p class="tag">Phone on your forehead, photo facing the room. Tap <strong>left</strong> = pass. Tap <strong>right</strong> = got it. The room only says <strong>yes</strong> or <strong>no</strong>.</p>
     </header>
 
     <div>
@@ -249,14 +245,13 @@
     <button class="quit" id="quit">End</button>
   </div>
   <div class="zones">
-    <button class="zone pass" id="zpass" style="display:none">Pass</button>
-    <button class="zone got" id="zgot" style="display:none">Got it</button>
+    <button class="zone pass" id="zpass">Pass</button>
+    <button class="zone got" id="zgot">Got it</button>
   </div>
-  <div class="tilt-hint" id="tilthint"><span class="arrow" id="tiltarrow"></span><span class="lbl" id="tiltlbl"></span></div>
   <div class="caption" id="caption"><span class="name" id="name"></span></div>
-  <div class="rule">Tilt down = got it &middot; Tilt up = skip</div>
+  <div class="rule">Audience: only answer yes or no</div>
   <div class="flash" id="flash" hidden></div>
-  <div class="rotate"><div class="icon"></div><strong>Hold phone on forehead</strong><p>Tilt down = got it. Tilt up = skip.</p></div>
+  <div class="rotate"><div class="icon"></div><strong>Turn your phone sideways</strong><p>Tap left = pass. Tap right = got it.</p></div>
 </section>
 
 <!-- RESULTS -->
@@ -436,7 +431,7 @@
   function runCountdown() {
     show('countdown');
     let n = 3; $('cnum').textContent = n;
-    $('ctext').textContent = game.mode === 'oneshot' ? 'Phone on your forehead, photo facing the room. Tilt down = got it.' : 'Phone on your forehead, photo facing the room. Tilt down = got it, tilt up = skip.';
+    $('ctext').textContent = game.mode === 'oneshot' ? 'Phone on your forehead, photo facing the room. Tap right = got it.' : 'Phone on your forehead. Tap left = pass, tap right = got it.';
     const iv = setInterval(() => { n--; if (n > 0) { $('cnum').textContent = n; beep(520, .08); } else { clearInterval(iv); beep(880, .25); startPlay(); } }, 900);
   }
 
@@ -526,148 +521,6 @@
   $('again').addEventListener('click', () => { $('start').click(); });
   $('back').addEventListener('click', () => { game = null; show('setup'); });
 
-  // ---- Tilt controls via DeviceOrientation ----
-  // Auto-calibrates: captures baseline orientation when play starts,
-  // then detects tilt relative to that baseline on whichever axis moves most.
-  // Works in portrait OR landscape, any rotation.
-  const TILT_TRIGGER = 25;  // degrees from baseline to fire
-  const TILT_HINT = 10;     // degrees to start showing hint
-  const TILT_RESET = 12;    // must return within this of baseline to re-arm
-  const TILT_COOLDOWN = 600; // ms after firing before re-arm
-  let tiltArmed = true;
-  let tiltActive = false;
-  let tiltBaseline = null;   // { beta, gamma }
-  let tiltCoolUntil = 0;
-  let tiltSamples = [];      // collect samples during countdown to average baseline
-
-  function tiltDelta(e) {
-    if (!tiltBaseline) return { down: 0, up: 0 };
-    // Compute delta on both axes from baseline
-    let db = e.beta - tiltBaseline.beta;
-    let dg = e.gamma - tiltBaseline.gamma;
-    // Use whichever axis has the larger absolute deviation
-    // In portrait: beta moves most on bow/lookup. In landscape: gamma moves most.
-    if (Math.abs(db) >= Math.abs(dg)) {
-      // beta-dominant: positive = tilted forward (bow) = GOT IT, negative = back = SKIP
-      return { down: db, up: -db, raw: db };
-    } else {
-      // gamma-dominant: need to figure out sign.
-      // In left-landscape (CCW), bowing decreases gamma. In right-landscape, bowing increases.
-      // Use the sign of baseline gamma to determine direction:
-      // If baseline gamma > 45 (right-landscape-ish), positive dg = bow = GOT IT
-      // If baseline gamma < -45 (left-landscape-ish), negative dg = bow = GOT IT
-      // Otherwise, just use positive = down
-      let sign = 1;
-      if (tiltBaseline.gamma < -45) sign = -1;
-      return { down: dg * sign, up: -dg * sign, raw: dg };
-    }
-  }
-
-  function handleTilt(e) {
-    if (!tiltActive) return;
-    const beta = e.beta, gamma = e.gamma;
-    if (beta === null || gamma === null) return;
-
-    // Collect calibration samples during countdown
-    if (!tiltBaseline) {
-      tiltSamples.push({ beta, gamma });
-      if (tiltSamples.length >= 10) {
-        // Average the samples for a stable baseline
-        const avg = tiltSamples.reduce((a, s) => ({ beta: a.beta + s.beta, gamma: a.gamma + s.gamma }), { beta: 0, gamma: 0 });
-        tiltBaseline = { beta: avg.beta / tiltSamples.length, gamma: avg.gamma / tiltSamples.length };
-        tiltSamples = [];
-      }
-      return;
-    }
-
-    if (!game || game.ended) return;
-
-    const d = tiltDelta(e);
-    const now = Date.now();
-    const hint = $('tilthint');
-    const arrow = $('tiltarrow');
-    const lbl = $('tiltlbl');
-
-    // Cooldown check
-    if (now < tiltCoolUntil) {
-      hint.classList.remove('show');
-      return;
-    }
-
-    // Trigger: tilt down past threshold = GOT IT
-    if (tiltArmed && d.down > TILT_TRIGGER) {
-      tiltArmed = false;
-      tiltCoolUntil = now + TILT_COOLDOWN;
-      hint.classList.remove('show');
-      $('zgot').click();
-      return;
-    }
-    // Trigger: tilt up past threshold = SKIP
-    if (tiltArmed && d.up > TILT_TRIGGER) {
-      tiltArmed = false;
-      tiltCoolUntil = now + TILT_COOLDOWN;
-      hint.classList.remove('show');
-      $('zpass').click();
-      return;
-    }
-
-    // Re-arm when back near baseline
-    if (!tiltArmed && Math.abs(d.down) < TILT_RESET && now >= tiltCoolUntil) {
-      tiltArmed = true;
-    }
-
-    // Show live tilt hints
-    if (tiltArmed) {
-      if (d.down > TILT_HINT) {
-        hint.classList.add('show');
-        arrow.textContent = '\u2B07';
-        arrow.style.color = 'var(--good)';
-        lbl.textContent = 'Got it!';
-        lbl.style.color = 'var(--good)';
-      } else if (d.up > TILT_HINT) {
-        hint.classList.add('show');
-        arrow.textContent = '\u2B06';
-        arrow.style.color = 'var(--bad)';
-        lbl.textContent = 'Skip';
-        lbl.style.color = 'var(--bad)';
-      } else {
-        hint.classList.remove('show');
-      }
-    }
-  }
-
-  // Request permission on iOS 13+
-  async function requestMotion() {
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const perm = await DeviceOrientationEvent.requestPermission();
-        if (perm !== 'granted') return false;
-      } catch { return false; }
-    }
-    return true;
-  }
-
-  // Hook into game start — request permission + start listening during countdown
-  $('start').addEventListener('click', async () => {
-    const granted = await requestMotion();
-    if (granted) {
-      tiltBaseline = null;
-      tiltSamples = [];
-      tiltActive = true;
-      tiltArmed = true;
-      tiltCoolUntil = 0;
-      window.addEventListener('deviceorientation', handleTilt);
-    }
-  }, { capture: true });
-
-  // Clean up tilt when leaving play screen
-  const mo = new MutationObserver(() => {
-    if (!$('play').hidden) return;
-    tiltActive = false;
-    tiltBaseline = null;
-    $('tilthint').classList.remove('show');
-  });
-  mo.observe($('play'), { attributes: true, attributeFilter: ['hidden'] });
 })();
 </script>
 
